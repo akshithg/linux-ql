@@ -31,7 +31,7 @@ function usage {
 }
 
 # defaults
-VERSION="research-v5.10"
+VERSION="v6.13"
 CONFIG="defconfig"
 
 # parse input
