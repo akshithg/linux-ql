@@ -68,6 +68,14 @@ uv run linux-ql docker -S /path/to/linux -- -v v6.13
 uv run linux-ql docker -a arm64 --toolchain gcc-14 -S /path/to/linux -- -v v6.13
 ```
 
+**Apple Silicon (M1/M2/M3):** The Docker images are x86_64. You need
+Rosetta emulation via [Colima](https://github.com/abiosoft/colima):
+
+```bash
+softwareupdate --install-rosetta
+colima start --vz-rosetta --arch x86_64
+```
+
 ## Makefile
 
 A Makefile is provided for common workflows:
@@ -84,6 +92,7 @@ make docker-build ARCH=arm64           # Build Docker image only
 make query DB=linux-v6.13-x86_64-codeql.db SUITE=heap
 make query-csv DB=linux-v6.13-x86_64-codeql.db
 make clean                             # Remove build artifacts
+make clean-all                         # Remove artifacts and databases
 ```
 
 ## Query suites
@@ -147,6 +156,7 @@ linux-ql/
 │   └── suites/                  # Query suite definitions
 ├── Dockerfile                   # Per-arch TuxMake base + CodeQL
 ├── ATTRIBUTION.md               # Source/license for vendored queries
+├── tests/                       # pytest test suite
 ├── CLAUDE.md                    # Project instructions for Claude Code
 └── readme.md                    # This file
 ```
