@@ -1,7 +1,0 @@
----
-library: false
-warnOnImplicitThis: false
-name: getting-started/queries-cpp
-version: 1.0.0
-dependencies:
-  codeql/cpp-all: ^3.2.0
