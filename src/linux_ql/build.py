@@ -3,6 +3,7 @@
 import os
 import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 
 import click
@@ -38,9 +39,14 @@ def resolve_source(
         else:
             click.echo(f"    Using cached {tarball_path}")
 
+        # Extract to a temp directory to avoid symlink failures on
+        # macOS Docker volume mounts (virtiofs doesn't support symlink()).
+        # The kernel source is read-only during the build (make -C ... O=...).
+        extract_dir = Path(tempfile.mkdtemp(prefix="linux-ql-"))
+
         click.echo("==> Extracting tarball...")
         subprocess.run(
-            ["tar", "xf", str(tarball_path), "-C", str(Path.cwd())],
+            ["tar", "xf", str(tarball_path), "-C", str(extract_dir)],
             check=True,
         )
 
@@ -52,7 +58,7 @@ def resolve_source(
             check=True,
         )
         top_dir = result.stdout.split("\n", maxsplit=1)[0].split("/")[0]
-        src_dir = Path.cwd() / top_dir
+        src_dir = extract_dir / top_dir
         click.echo(f"    Source directory: {src_dir}")
         return src_dir
 

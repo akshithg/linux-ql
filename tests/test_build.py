@@ -1,5 +1,6 @@
 """Tests for build module: tool checks, source resolution, kernel config, and DB creation."""
 
+from pathlib import Path
 from unittest.mock import call, patch
 
 import click
@@ -59,14 +60,15 @@ class TestResolveSource:
             ["curl", "-L", "--fail", "-o", str(tmp_path / ".downloads" / "linux-6.13.tar.xz"), url],
             check=True,
         )
-        # Second call: tar extract
-        assert calls[1] == call(
-            ["tar", "xf", str(tmp_path / ".downloads" / "linux-6.13.tar.xz"), "-C", str(tmp_path)],
-            check=True,
-        )
+        # Second call: tar extract (to a temp dir, not cwd)
+        tar_extract_args = calls[1].args[0]
+        assert tar_extract_args[0] == "tar"
+        assert tar_extract_args[1] == "xf"
+        extract_dir = tar_extract_args[4]
+        assert extract_dir != str(tmp_path)  # not cwd
         # Third call: tar tf to detect directory
         assert calls[2].args[0] == ["tar", "tf", str(tmp_path / ".downloads" / "linux-6.13.tar.xz")]
-        assert result == tmp_path / "linux-6.13"
+        assert result == Path(extract_dir) / "linux-6.13"
 
     @patch("linux_ql.build.subprocess.run")
     def test_url_uses_cache(self, mock_run, tmp_path, monkeypatch):
@@ -85,7 +87,9 @@ class TestResolveSource:
 
         # Should skip curl, only tar xf + tar tf
         assert len(mock_run.call_args_list) == 2
-        assert mock_run.call_args_list[0].args[0][0] == "tar"
+        tar_xf_args = mock_run.call_args_list[0].args[0]
+        assert tar_xf_args[0] == "tar"
+        assert tar_xf_args[1] == "xf"
 
 
 class TestConfigureKernel:
