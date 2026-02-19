@@ -1,0 +1,6 @@
+---
+library: false
+name: linux-ql/kernel-queries
+version: 0.1.0
+dependencies:
+  codeql/cpp-all: ^3.2.0

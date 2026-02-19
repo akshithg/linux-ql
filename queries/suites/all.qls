@@ -1,0 +1,3 @@
+- description: All linux-ql kernel queries
+- queries: .
+  from: linux-ql/kernel-queries

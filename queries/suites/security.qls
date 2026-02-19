@@ -1,0 +1,4 @@
+- description: Security-focused kernel queries
+- include:
+    tags contain: security
+  from: linux-ql/kernel-queries

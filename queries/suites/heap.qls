@@ -1,0 +1,4 @@
+- description: Heap exploitation analysis queries
+- include:
+    tags contain: heap
+  from: linux-ql/kernel-queries

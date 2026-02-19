@@ -1,0 +1,4 @@
+- description: Kernel struct layout analysis queries
+- include:
+    tags contain: structures
+  from: linux-ql/kernel-queries
