@@ -1,0 +1,133 @@
+name: Build CodeQL Databases
+
+on:
+  schedule:
+    - cron: "0 0 1 * *" # 1st of each month at midnight UTC
+  workflow_dispatch:
+    inputs:
+      kernel_version:
+        description: "Kernel version tag (e.g. v6.19). Empty = full matrix."
+        default: ""
+      arch:
+        description: "Architecture (x86_64 or arm64). Empty = full matrix."
+        default: ""
+
+# Cancel in-progress runs for the same ref (schedule or dispatch)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CODEQL_VERSION: "2.24.1"
+
+jobs:
+  # Compute the build matrix, filtering by workflow_dispatch inputs when set
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Compute matrix
+        id: set-matrix
+        env:
+          INPUT_KERNEL: ${{ inputs.kernel_version }}
+          INPUT_ARCH: ${{ inputs.arch }}
+        run: |
+          full='{"include":[
+            {"kernel":"v6.19","arch":"x86_64"},
+            {"kernel":"v6.19","arch":"arm64"},
+            {"kernel":"v6.12","arch":"x86_64"},
+            {"kernel":"v6.12","arch":"arm64"}
+          ]}'
+
+          if [ -n "$INPUT_KERNEL" ] || [ -n "$INPUT_ARCH" ]; then
+            matrix=$(echo "$full" | jq -c \
+              --arg k "$INPUT_KERNEL" \
+              --arg a "$INPUT_ARCH" \
+              '{include: [.include[] |
+                select(($k == "" or .kernel == $k) and
+                       ($a == "" or .arch == $a))]}')
+          else
+            matrix="$full"
+          fi
+
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+
+      - name: Install CodeQL CLI
+        run: |
+          curl -fsSL \
+            "https://github.com/github/codeql-cli-binaries/releases/download/v${CODEQL_VERSION}/codeql-linux64.zip" \
+            -o /tmp/codeql.zip
+          sudo unzip -q /tmp/codeql.zip -d /opt
+          rm /tmp/codeql.zip
+          echo "/opt/codeql" >> "$GITHUB_PATH"
+
+      - name: Verify CodeQL
+        run: codeql version
+
+      - name: Install cross-compiler
+        if: matrix.arch == 'arm64'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            gcc-aarch64-linux-gnu
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Install CodeQL pack dependencies
+        run: codeql pack install queries/
+
+      - name: Cache kernel tarball
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: .downloads
+          key: kernel-${{ matrix.kernel }}
+
+      - name: Build CodeQL database
+        env:
+          KERNEL_VERSION: ${{ matrix.kernel }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          # Strip leading 'v' for the tarball filename (v6.19 -> 6.19)
+          version_num="${KERNEL_VERSION#v}"
+          major="${version_num%%.*}"
+          tarball_url="https://cdn.kernel.org/pub/linux/kernel/v${major}.x/linux-${version_num}.tar.xz"
+
+          uv run linux-ql build \
+            -u "$tarball_url" \
+            -a "$ARCH" \
+            -v "$KERNEL_VERSION"
+
+      - name: Compress database
+        env:
+          KERNEL_VERSION: ${{ matrix.kernel }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          db_dir="linux-${KERNEL_VERSION}-${ARCH}-codeql.db"
+          tar -cf - "$db_dir" | zstd -T0 -9 > "${db_dir}.tar.zst"
+
+      - name: Upload database artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: linux-${{ matrix.kernel }}-${{ matrix.arch }}-codeql-db
+          path: "*.tar.zst"
+          retention-days: 90
+          compression-level: 0 # already compressed with zstd

@@ -1,5 +1,7 @@
 # linux-ql
 
+[![Build CodeQL Databases](https://github.com/akshithg/linux-ql/actions/workflows/build-db.yml/badge.svg)](https://github.com/akshithg/linux-ql/actions/workflows/build-db.yml)
+
 CodeQL static analysis toolkit for the Linux kernel. Includes a curated set
 of security-focused queries for heap exploitation research, struct layout
 analysis, init-section bugs, and taint tracking.
@@ -160,6 +162,14 @@ linux-ql/
 ├── CLAUDE.md                    # Project instructions for Claude Code
 └── readme.md                    # This file
 ```
+
+## Pre-built databases
+
+Pre-built CodeQL databases for x86_64 and arm64 are generated monthly via
+GitHub Actions. Download them from the
+[Actions tab](https://github.com/akshithg/linux-ql/actions/workflows/build-db.yml)
+(look for workflow artifacts). You can also trigger a build manually with
+custom kernel version and architecture inputs.
 
 ## Additional query packs
 

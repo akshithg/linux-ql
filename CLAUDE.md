@@ -40,6 +40,16 @@ codeql database analyze <database> --format=sarif-latest --output=tob.sarif -- t
 make check                             # lint + format check + test
 make db SOURCE=/path/to/linux          # build CodeQL database
 make query DB=<database> SUITE=heap    # run queries
+
+# CI: monthly database builds (also manual via workflow_dispatch)
+# See .github/workflows/build-db.yml
+gh workflow run build-db.yml
+gh workflow run build-db.yml -f kernel_version=v6.19 -f arch=arm64
+
+# Local workflow validation (act must be installed separately)
+# Use for quick iteration on shell logic and matrix computation;
+# not a substitute for real GitHub runners (missing tools, no artifacts).
+act -W .github/workflows/build-db.yml --matrix arch:x86_64 --matrix kernel:v6.19
 ```
 
 ## Structure
