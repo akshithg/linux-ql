@@ -33,25 +33,24 @@ jobs:
           INPUT_KERNEL: ${{ inputs.kernel_version }}
           INPUT_ARCH: ${{ inputs.arch }}
         run: |
-          full='{"include":[
+          full='[
             {"kernel":"v6.19","arch":"x86_64"},
             {"kernel":"v6.19","arch":"arm64"},
             {"kernel":"v6.12","arch":"x86_64"},
             {"kernel":"v6.12","arch":"arm64"}
-          ]}'
+          ]'
 
           if [ -n "$INPUT_KERNEL" ] || [ -n "$INPUT_ARCH" ]; then
-            matrix=$(echo "$full" | jq -c \
+            entries=$(echo "$full" | jq -c \
               --arg k "$INPUT_KERNEL" \
               --arg a "$INPUT_ARCH" \
-              '{include: [.include[] |
-                select(($k == "" or .kernel == $k) and
-                       ($a == "" or .arch == $a))]}')
+              '[.[] | select(($k == "" or .kernel == $k) and
+                             ($a == "" or .arch == $a))]')
           else
-            matrix="$full"
+            entries=$(echo "$full" | jq -c '.')
           fi
 
-          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "matrix={\"include\":$entries}" >> "$GITHUB_OUTPUT"
 
   build:
     needs: setup
