@@ -78,12 +78,12 @@ jobs:
       - name: Verify CodeQL
         run: codeql version
 
-      - name: Install cross-compiler
-        if: matrix.arch == 'arm64'
+      - name: Install kernel build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            gcc-aarch64-linux-gnu
+            bc bison flex libssl-dev libelf-dev \
+            ${{ matrix.arch == 'arm64' && 'gcc-aarch64-linux-gnu' || '' }}
 
       - name: Set up uv
         uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
