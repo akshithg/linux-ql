@@ -5,15 +5,14 @@ from pathlib import Path
 
 import click
 
-# CodeQL only ships x86_64 Linux binaries, so we always build
-# and run images as linux/amd64 (Rosetta handles emulation on
-# arm64 Docker hosts like Apple Silicon).
+# TuxMake's cross-compilation images run as linux/amd64, so the container
+# platform is independent of the kernel architecture being built.
 _PLATFORM = "linux/amd64"
 
 
 def ensure_image(arch: str, toolchain: str, context_dir: Path) -> str:
     """Build the per-arch Docker image if it doesn't already exist."""
-    image_name = f"linux-ql-{arch}"
+    image_name = f"linux-ql-{arch}-{toolchain}"
     tuxmake_image = f"tuxmake/{arch}_{toolchain}:latest"
 
     result = subprocess.run(

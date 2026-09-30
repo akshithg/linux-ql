@@ -23,8 +23,8 @@ class WideUnsignedSource extends DataFlow::Node {
   WideUnsignedSource() {
     exists(Parameter p |
       this.asParameter() = p and
-      p.getUnspecifiedType().getSize() >= 8 and
-      p.getUnspecifiedType().isUnsigned()
+      p.getUnspecifiedType().(IntegralType).getSize() >= 8 and
+      p.getUnspecifiedType().(IntegralType).isUnsigned()
     )
   }
 }
@@ -37,8 +37,8 @@ class NarrowIntSink extends DataFlow::Node {
   NarrowIntSink() {
     exists(Expr e |
       this.asExpr() = e and
-      e.getFullyConverted().getType().getSize() <= 4 and
-      not e.getFullyConverted().getType().isUnsigned() and
+      e.getFullyConverted().getType().(IntegralType).getSize() <= 4 and
+      e.getFullyConverted().getType().(IntegralType).isSigned() and
       (
         e.getParent() instanceof PointerArithmeticOperation or
         e.getParent() instanceof ArrayExpr

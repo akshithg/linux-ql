@@ -12,13 +12,13 @@ class TestEnsureImage:
 
         name = ensure_image("x86_64", "gcc-13", tmp_path)
 
-        assert name == "linux-ql-x86_64"
+        assert name == "linux-ql-x86_64-gcc-13"
         mock_run.assert_called_once()
         assert mock_run.call_args.args[0] == [
             "docker",
             "image",
             "inspect",
-            "linux-ql-x86_64",
+            "linux-ql-x86_64-gcc-13",
         ]
 
     @patch("linux_ql.docker.subprocess.run")
@@ -28,7 +28,7 @@ class TestEnsureImage:
 
         name = ensure_image("arm64", "gcc-13", tmp_path)
 
-        assert name == "linux-ql-arm64"
+        assert name == "linux-ql-arm64-gcc-13"
         assert mock_run.call_count == 2
         build_args = mock_run.call_args_list[1].args[0]
         assert build_args == [
@@ -39,7 +39,7 @@ class TestEnsureImage:
             "--build-arg",
             "TUXMAKE_IMAGE=tuxmake/arm64_gcc-13:latest",
             "-t",
-            "linux-ql-arm64",
+            "linux-ql-arm64-gcc-13",
             str(tmp_path),
         ]
 
@@ -50,13 +50,23 @@ class TestEnsureImage:
 
         name = ensure_image("riscv", "gcc-14", tmp_path)
 
-        assert name == "linux-ql-riscv"
+        assert name == "linux-ql-riscv-gcc-14"
         build_args = mock_run.call_args_list[1].args[0]
         assert "TUXMAKE_IMAGE=tuxmake/riscv_gcc-14:latest" in build_args
 
+    @patch("linux_ql.docker.subprocess.run")
+    def test_toolchains_use_distinct_images(self, mock_run, tmp_path):
+        mock_run.return_value = MagicMock(returncode=0)
+
+        gcc_13 = ensure_image("arm64", "gcc-13", tmp_path)
+        gcc_14 = ensure_image("arm64", "gcc-14", tmp_path)
+
+        assert gcc_13 == "linux-ql-arm64-gcc-13"
+        assert gcc_14 == "linux-ql-arm64-gcc-14"
+
 
 class TestRunInDocker:
-    @patch("linux_ql.docker.ensure_image", return_value="linux-ql-x86_64")
+    @patch("linux_ql.docker.ensure_image", return_value="linux-ql-x86_64-gcc-13")
     @patch("linux_ql.docker.subprocess.run")
     def test_constructs_correct_args(self, mock_run, mock_ensure):
         run_in_docker(
@@ -72,10 +82,10 @@ class TestRunInDocker:
         assert "--rm" in args
         assert "--platform" in args
         assert "linux/amd64" in args
-        assert "linux-ql-x86_64" in args
+        assert "linux-ql-x86_64-gcc-13" in args
         assert "v6.13" in args
 
-    @patch("linux_ql.docker.ensure_image", return_value="linux-ql-arm64")
+    @patch("linux_ql.docker.ensure_image", return_value="linux-ql-arm64-gcc-13")
     @patch("linux_ql.docker.subprocess.run")
     def test_mounts_source_when_provided(self, mock_run, mock_ensure):
         run_in_docker(
@@ -92,7 +102,7 @@ class TestRunInDocker:
         assert "-S" in args
         assert "/kernel" in args
 
-    @patch("linux_ql.docker.ensure_image", return_value="linux-ql-x86_64")
+    @patch("linux_ql.docker.ensure_image", return_value="linux-ql-x86_64-gcc-13")
     @patch("linux_ql.docker.subprocess.run")
     def test_no_source_mount_when_omitted(self, mock_run, mock_ensure):
         run_in_docker("x86_64", "gcc-13", (), context_dir=MagicMock())

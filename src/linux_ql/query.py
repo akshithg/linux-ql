@@ -7,17 +7,15 @@ import click
 
 
 def queries_dir() -> Path:
-    """Resolve the queries/ directory relative to the repo root.
-
-    Walks up from this file's location to find the queries/ directory.
-    """
-    current = Path(__file__).resolve().parent
-    # Walk up: src/linux_ql/ -> src/ -> repo root
-    for _ in range(5):
-        candidate = current / "queries"
+    """Find the query pack in an installed package or source checkout."""
+    module_dir = Path(__file__).resolve().parent
+    candidates = (
+        module_dir / "queries",
+        module_dir.parent.parent / "queries",
+    )
+    for candidate in candidates:
         if candidate.is_dir():
             return candidate
-        current = current.parent
     raise click.ClickException("Cannot locate queries/ directory.")
 
 

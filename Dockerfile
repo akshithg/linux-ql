@@ -11,10 +11,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 FROM toolchain AS codeql
 
-ARG CODEQL_VERSION=2.24.1
+ARG CODEQL_VERSION=2.27.1
 
-# CodeQL only ships x86_64 Linux binaries (codeql-linux64.zip).
-# On arm64 Docker hosts this runs under QEMU/Rosetta emulation.
+# The TuxMake toolchain image runs as linux/amd64. On arm64 Docker hosts,
+# this CodeQL bundle runs under QEMU or Rosetta emulation with the image.
 RUN curl -fsSL \
     "https://github.com/github/codeql-cli-binaries/releases/download/v${CODEQL_VERSION}/codeql-linux64.zip" \
     -o /tmp/codeql.zip \

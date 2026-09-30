@@ -5,6 +5,7 @@ from unittest.mock import patch
 import click
 import pytest
 
+import linux_ql.query as query_module
 from linux_ql.query import export_csv, queries_dir, run_analysis
 
 
@@ -14,6 +15,31 @@ class TestQueriesDir:
         assert qdir.is_dir()
         assert qdir.name == "queries"
         assert (qdir / "codeql-pack.yml").exists()
+
+    def test_finds_queries_installed_in_package(self, tmp_path, monkeypatch):
+        module_dir = tmp_path / "site-packages" / "linux_ql"
+        packaged_queries = module_dir / "queries"
+        packaged_queries.mkdir(parents=True)
+        monkeypatch.setattr(query_module, "__file__", str(module_dir / "query.py"))
+
+        assert queries_dir() == packaged_queries
+
+    def test_finds_queries_in_source_checkout(self, tmp_path, monkeypatch):
+        module_dir = tmp_path / "project" / "src" / "linux_ql"
+        source_queries = tmp_path / "project" / "queries"
+        module_dir.mkdir(parents=True)
+        source_queries.mkdir()
+        monkeypatch.setattr(query_module, "__file__", str(module_dir / "query.py"))
+
+        assert queries_dir() == source_queries
+
+    def test_raises_when_queries_are_missing(self, tmp_path, monkeypatch):
+        module_dir = tmp_path / "site-packages" / "linux_ql"
+        module_dir.mkdir(parents=True)
+        monkeypatch.setattr(query_module, "__file__", str(module_dir / "query.py"))
+
+        with pytest.raises(click.ClickException, match="Cannot locate queries"):
+            queries_dir()
 
 
 class TestRunAnalysis:
