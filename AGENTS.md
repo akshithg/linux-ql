@@ -11,7 +11,7 @@ CodeQL static analysis queries for the Linux kernel.
 ## Setup
 
 ```bash
-uv sync
+uv sync --frozen
 ```
 
 ## Commands
@@ -37,19 +37,17 @@ codeql database analyze <database> --format=sarif-latest --output=results.sarif 
 codeql database analyze <database> --format=sarif-latest --output=tob.sarif -- trailofbits/cpp-queries
 
 # Makefile shortcuts
-make check                             # lint + format check + test
+make check                             # lint + format + type check + test
+make ql-check                          # compile-check every CodeQL query
 make db SOURCE=/path/to/linux          # build CodeQL database
 make query DB=<database> SUITE=heap    # run queries
 
-# CI: monthly database builds (also manual via workflow_dispatch)
-# See .github/workflows/build-db.yml
-gh workflow run build-db.yml
-gh workflow run build-db.yml -f kernel_version=v6.19 -f arch=arm64
+# Full database builds are release operations. Run them locally or on a
+# trusted, long-running build host, then create an archive for durable storage.
+make db-archive DB=<database>
 
-# Local workflow validation (act must be installed separately)
-# Use for quick iteration on shell logic and matrix computation;
-# not a substitute for real GitHub runners (missing tools, no artifacts).
-act -W .github/workflows/build-db.yml --matrix arch:x86_64 --matrix kernel:v6.19
+# CI runs bounded Python checks and compiles all QL queries.
+# See .github/workflows/ci.yml
 ```
 
 ## Structure
@@ -69,6 +67,6 @@ act -W .github/workflows/build-db.yml --matrix arch:x86_64 --matrix kernel:v6.19
 - Database files (`*.db`) and kernel build dirs (`linux-*`) are gitignored
 - The DB filename includes version and arch: `linux-<version>-<arch>-codeql.db`
 - `linux-ql build` runs `make -j$(nproc)` — ensure enough RAM
-- CodeQL database creation is slow (~30 min+ depending on config and hardware)
+- CodeQL database creation is slow and may exceed hosted CI time limits
 - Cross-compilation requires the target toolchain (or use Docker)
 - Query pack is at `queries/` root — use `codeql pack install queries/` to resolve deps

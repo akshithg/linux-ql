@@ -1,6 +1,6 @@
 # linux-ql
 
-[![Build CodeQL Databases](https://github.com/akshithg/linux-ql/actions/workflows/build-db.yml/badge.svg)](https://github.com/akshithg/linux-ql/actions/workflows/build-db.yml)
+[![CI](https://github.com/akshithg/linux-ql/actions/workflows/ci.yml/badge.svg)](https://github.com/akshithg/linux-ql/actions/workflows/ci.yml)
 
 CodeQL static analysis toolkit for the Linux kernel. Includes a curated set
 of security-focused queries for heap exploitation research, struct layout
@@ -16,7 +16,7 @@ analysis, init-section bugs, and taint tracking.
 ## Install
 
 ```bash
-uv sync
+uv sync --frozen
 ```
 
 ## Quick start
@@ -52,12 +52,12 @@ uv run linux-ql query -d linux-v6.13-x86_64-codeql.db -s heap --csv
 
 ## Docker (macOS / no cross-compilers)
 
-Each architecture gets its own lean Docker image built from
+Each architecture and toolchain pair gets its own lean Docker image built from
 [TuxMake](https://tuxmake.org/)'s per-arch base (`tuxmake/{arch}_gcc-13`).
-The first run per architecture triggers a `docker build`.
+The first run for a pair triggers a `docker build`.
 
 ```bash
-# Build for arm64 (builds linux-ql-arm64 image on first run)
+# Build for arm64 (builds linux-ql-arm64-gcc-13 on first run)
 uv run linux-ql docker -a arm64 -S /path/to/linux -- -v v6.13
 
 # Build for riscv from a tarball
@@ -85,12 +85,14 @@ A Makefile is provided for common workflows:
 ```bash
 make help                              # List all targets
 make setup                             # Install dependencies
-make check                             # Lint + format check + test
+make check                             # Lint + format + type check + test
+make ql-check                          # Compile-check every CodeQL query
 make db SOURCE=/path/to/linux          # Build CodeQL database
 make db URL=https://cdn.kernel.org/... # Build from tarball
 make db-docker SOURCE=/path/to/linux   # Build via Docker (per-arch)
 make db-docker SOURCE=/p ARCH=arm64    # Docker build for arm64
 make docker-build ARCH=arm64           # Build Docker image only
+make db-archive DB=/path/to/database   # Create a compressed database archive
 make query DB=linux-v6.13-x86_64-codeql.db SUITE=heap
 make query-csv DB=linux-v6.13-x86_64-codeql.db
 make clean                             # Remove build artifacts
@@ -159,17 +161,30 @@ linux-ql/
 ├── Dockerfile                   # Per-arch TuxMake base + CodeQL
 ├── ATTRIBUTION.md               # Source/license for vendored queries
 ├── tests/                       # pytest test suite
-├── CLAUDE.md                    # Project instructions for Claude Code
+├── AGENTS.md                    # Project instructions for coding agents
 └── readme.md                    # This file
 ```
 
-## Pre-built databases
+## Automated checks
 
-Pre-built CodeQL databases for x86_64 and arm64 are generated monthly via
-GitHub Actions. Download them from the
-[Actions tab](https://github.com/akshithg/linux-ql/actions/workflows/build-db.yml)
-(look for workflow artifacts). You can also trigger a build manually with
-custom kernel version and architecture inputs.
+GitHub Actions runs the Python checks and compile-checks all QL queries on
+pull requests and pushes to `main`. These checks do not build a Linux kernel
+or a CodeQL database, so they finish within the hosted runner time budget.
+
+Full database builds are release operations. Run them on a workstation,
+dedicated virtual machine, or trusted self-hosted runner with enough memory
+and no short job timeout:
+
+```bash
+make db URL=https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.19.tar.xz \
+  VERSION=v6.19 ARCH=x86_64
+make db-archive DB=linux-v6.19-x86_64-codeql.db
+```
+
+Store the resulting `.tar.zst` file in durable release or object storage.
+If a self-hosted GitHub runner is used, restrict the database workflow to
+manual runs from trusted branches. Do not expose that runner to pull-request
+code from forks.
 
 ## Additional query packs
 

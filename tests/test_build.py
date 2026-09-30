@@ -1,5 +1,6 @@
 """Tests for build module: tool checks, source resolution, kernel config, and DB creation."""
 
+import shlex
 from pathlib import Path
 from unittest.mock import call, patch
 
@@ -163,3 +164,16 @@ class TestCreateDatabase:
         src, build, db = tmp_path / "src", tmp_path / "build", tmp_path / "db"
         result = create_database(src, build, "x86_64", "", db)
         assert result == tmp_path / "db"
+
+    @patch("linux_ql.build.subprocess.run")
+    def test_make_command_preserves_paths_with_spaces(self, mock_run, tmp_path):
+        src = tmp_path / "source tree"
+        build = tmp_path / "build tree"
+
+        create_database(src, build, "x86_64", "", tmp_path / "db")
+
+        args = mock_run.call_args.args[0]
+        command_arg = next(arg for arg in args if arg.startswith("--command="))
+        make_args = shlex.split(command_arg.removeprefix("--command="))
+        assert make_args[:3] == ["make", "-C", str(src)]
+        assert f"O={build}" in make_args

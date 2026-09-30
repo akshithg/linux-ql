@@ -1,6 +1,7 @@
 """Kernel source resolution, configuration, and CodeQL database creation."""
 
 import os
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -118,10 +119,11 @@ def create_database(
     """Run codeql database create with kernel build as the traced command."""
     nproc = os.cpu_count() or 4
 
-    make_cmd = f"make -C {src_dir} O={build_dir} ARCH={arch}"
+    make_args = ["make", "-C", str(src_dir), f"O={build_dir}", f"ARCH={arch}"]
     if cross_compile:
-        make_cmd += f" CROSS_COMPILE={cross_compile}"
-    make_cmd += f" -j{nproc}"
+        make_args.append(f"CROSS_COMPILE={cross_compile}")
+    make_args.append(f"-j{nproc}")
+    make_cmd = shlex.join(make_args)
 
     click.echo("==> Building kernel with CodeQL tracing...")
     click.echo(f"    Database: {output}")

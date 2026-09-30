@@ -1,6 +1,5 @@
 linux-*/
 *.db
-*.lock.yml
 results/
 *.sarif
 .downloads/

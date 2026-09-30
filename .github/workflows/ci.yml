@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CODEQL_VERSION: "2.27.1"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: latest-known
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Check Python
+        run: make check
+
+      - name: Install CodeQL CLI
+        run: |
+          curl -fsSL \
+            "https://github.com/github/codeql-cli-binaries/releases/download/v${CODEQL_VERSION}/codeql-linux64.zip" \
+            -o /tmp/codeql.zip
+          sudo unzip -q /tmp/codeql.zip -d /opt
+          rm /tmp/codeql.zip
+          echo "/opt/codeql" >> "$GITHUB_PATH"
+
+      - name: Install query pack dependencies
+        run: /opt/codeql/codeql pack install queries/
+
+      - name: Compile queries
+        run: /opt/codeql/codeql query compile --check-only --keep-going --warnings=error -- queries/
